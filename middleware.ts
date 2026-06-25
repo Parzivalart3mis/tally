@@ -9,7 +9,13 @@ const isPublic = createRouteMatcher([
   '/sign-up(.*)',
 ]);
 
+// Dev-only: with DEV_USER_ID set (non-production), skip Clerk protection so the
+// seeded demo is viewable without configuring Clerk. No effect in production.
+const devBypass =
+  process.env.NODE_ENV !== 'production' && !!process.env.DEV_USER_ID;
+
 export default clerkMiddleware(async (auth, req) => {
+  if (devBypass) return;
   if (isProtected(req) && !isPublic(req)) {
     await auth.protect();
   }

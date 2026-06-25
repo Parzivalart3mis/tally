@@ -1,0 +1,23 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript",
+    "plugin:tailwindcss/recommended",
+    "prettier"
+  ],
+  "plugins": ["@typescript-eslint", "tailwindcss"],
+  "rules": {
+    "tailwindcss/no-custom-classname": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    ]
+  },
+  "settings": {
+    "tailwindcss": {
+      "callees": ["cn", "cva"],
+      "config": "tailwind.config.ts"
+    }
+  },
+  "ignorePatterns": ["node_modules", ".next", "db/migrations", "public/sw.js"]
+}

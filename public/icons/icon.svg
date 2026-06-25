@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Tally — a coin divided into shares">
+  <title>Tally</title>
+  <!-- cream icon canvas -->
+  <rect width="512" height="512" fill="#FAF7F0"/>
+  <g>
+    <!-- coin body -->
+    <circle cx="256" cy="256" r="179" fill="#FAF7F0"/>
+    <!-- one wedge filled gold: the largest (120deg) sector, top -> lower-right -->
+    <path d="M256 256 L256 77 A179 179 0 0 1 411 345.5 Z" fill="#D9A521"/>
+    <!-- uneven radial dividers -->
+    <g stroke="#D9A521" stroke-width="12" stroke-linecap="round">
+      <line x1="256" y1="256" x2="256" y2="77"/>
+      <line x1="256" y1="256" x2="411" y2="345.5"/>
+      <line x1="256" y1="256" x2="118.9" y2="371.1"/>
+      <line x1="256" y1="256" x2="101" y2="166.5"/>
+    </g>
+    <!-- thick coin rim on top for a clean edge -->
+    <circle cx="256" cy="256" r="179" fill="none" stroke="#D9A521" stroke-width="25"/>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+import { route, jsonOk, parseJson } from '@/lib/api';
+import { requireUser } from '@/lib/auth';
+import { enforceRateLimit } from '@/lib/ratelimit';
+import { computeRequestSchema } from '@/lib/schemas';
+import { computeWithEngine } from '@/lib/engines';
+import type { ComputeInput } from '@/lib/types';
+
+export const POST = route(async (req: Request) => {
+  const userId = await requireUser();
+  await enforceRateLimit('compute', userId);
+  const body = await parseJson(req, computeRequestSchema);
+
+  const items = body.items.map((it, i) => ({
+    name: it.name,
+    unitPriceCents: it.unitPriceCents,
+    qty: it.qty,
+    lineTotalCents: it.lineTotalCents,
+    sharedBy: body.assignments[i] ?? [],
+  }));
+
+  const input: ComputeInput = {
+    items,
+    totals: body.totals,
+    participantNames: body.participantNames,
+  };
+
+  const out = await computeWithEngine(body.engine, input, body.assignments);
+  return jsonOk({ result: out.result, verification: out.verification ?? null });
+});

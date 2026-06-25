@@ -103,19 +103,15 @@ export async function persistBill(
     ...(opts.createdAt ? { createdAt: opts.createdAt } : {}),
   };
 
-  const statements = [
-    db.insert(bills).values(billRow),
-    db.insert(billParticipants).values(participantRows),
-    db.insert(billItems).values(itemRows),
-  ];
-  if (assignmentRows.length > 0) {
-    statements.push(db.insert(itemAssignments).values(assignmentRows));
-  }
-
-  // libSQL batch is atomic and works on both local files and hosted Turso.
-  await db.batch(
-    statements as [(typeof statements)[number], ...typeof statements],
-  );
+  // One atomic transaction (libSQL supports this on local files and Turso).
+  await db.transaction(async (tx) => {
+    await tx.insert(bills).values(billRow);
+    await tx.insert(billParticipants).values(participantRows);
+    await tx.insert(billItems).values(itemRows);
+    if (assignmentRows.length > 0) {
+      await tx.insert(itemAssignments).values(assignmentRows);
+    }
+  });
 
   return billId;
 }

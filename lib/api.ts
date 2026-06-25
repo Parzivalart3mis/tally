@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ZodError, type ZodSchema } from 'zod';
+import { ZodError, type z } from 'zod';
 
 /** Error shape returned by every route: { error: { code, message } }. */
 export class ApiError extends Error {
@@ -61,11 +61,12 @@ export function route<Args extends unknown[]>(
   };
 }
 
-/** Parse + validate a JSON body, throwing a 400 ApiError on bad input. */
-export async function parseJson<T>(
+/** Parse + validate a JSON body, throwing a 400 ApiError on bad input.
+ *  Uses the schema's OUTPUT type so `.default()` / `.transform()` are honored. */
+export async function parseJson<S extends z.ZodTypeAny>(
   req: Request,
-  schema: ZodSchema<T>,
-): Promise<T> {
+  schema: S,
+): Promise<z.infer<S>> {
   let body: unknown;
   try {
     body = await req.json();

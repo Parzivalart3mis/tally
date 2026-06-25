@@ -31,9 +31,9 @@ export interface ComputeTotals {
   discountCents: number;
   grandTotalCents: number;
   /** Optional: tax as a rate (e.g. 0.0825) instead of an amount. */
-  taxRate?: number;
+  taxRate?: number | undefined;
   /** Optional: whether the whole-bill discount applies before tax. */
-  discountBeforeTax?: boolean;
+  discountBeforeTax?: boolean | undefined;
 }
 
 /** Everything an engine needs to produce a SplitResult. */

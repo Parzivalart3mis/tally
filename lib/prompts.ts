@@ -10,6 +10,8 @@ Rules:
 - Do not invent items or amounts. If a line's price or name is unclear, still include your best reading but set "lowConfidence": true on that item.
 - unitPrice * qty should equal lineTotal; if the receipt only shows a line total, set unitPrice = lineTotal and qty = 1.
 - Numbers only for money fields (no currency symbols).
+- DISCOUNTS: only report a non-zero "discount" if it is subtracted from the listed item prices (items shown at full price, then a discount reduces the subtotal). If the item prices already shown are the DISCOUNTED prices, set "discount" to 0 — never count a discount twice.
+- SANITY CHECK before answering: subtotal − discount + tax + service + tip + extras must approximately equal the grand total. If it does not, re-read the numbers (especially the discount and the final total) and correct them.
 - If you cannot find a grand total, use the sum of subtotal + tax + service + tip + extras - discount.
 
 Return ONLY the structured receipt data.`;

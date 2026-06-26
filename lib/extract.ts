@@ -79,20 +79,101 @@ const RECEIPT_JSON_SCHEMA = {
 };
 
 /**
- * Route extraction to a vision model. Only the Claude engine reads with Claude
- * vision; the Exact (default) and Groq engines read with the cheaper Groq
- * vision model, so the default path never spends Anthropic credits.
+ * Route extraction to a vision model by engine:
+ *   - Claude engine  → Claude vision (accurate, paid)
+ *   - Groq engine    → Groq vision (free, weaker)
+ *   - Exact (default)→ Gemini Flash (free + accurate); falls back to Claude if
+ *                      GEMINI_API_KEY isn't set. Groq is not used for Exact.
  */
 export async function extractReceipt(
   blobUrl: string,
   engine: SplitEngineId,
 ): Promise<ExtractedReceiptDto> {
-  const raw =
-    engine === 'CLAUDE_PROMPT'
-      ? await extractWithClaude(blobUrl)
-      : await extractWithGroq(blobUrl);
+  let raw: unknown;
+  if (engine === 'CLAUDE_PROMPT') {
+    raw = await extractWithClaude(blobUrl);
+  } else if (engine === 'GROQ') {
+    raw = await extractWithGroq(blobUrl);
+  } else {
+    // EXACT (default): prefer Gemini Flash (free + accurate). If it isn't
+    // configured, or fails (e.g. free-tier rate limit / quota), fall back to
+    // accurate Claude so the default flow always works. Groq is not used here.
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        raw = await extractWithGemini(blobUrl);
+      } catch (err) {
+        console.warn('[extract] Gemini failed; falling back to Claude:', err);
+        raw = await extractWithClaude(blobUrl);
+      }
+    } else {
+      raw = await extractWithClaude(blobUrl);
+    }
+  }
   // Validate/normalize whatever the model returned.
   return extractedReceiptSchema.parse(raw);
+}
+
+/** Gemini Flash via its OpenAI-compatible endpoint (no extra SDK needed). */
+async function extractWithGemini(blobUrl: string): Promise<unknown> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw errors.upstream('GEMINI_API_KEY is not configured.');
+  const model = process.env.GEMINI_VISION_MODEL ?? 'gemini-2.0-flash';
+
+  // Send the (already sharp-normalized) image as a base64 data URI.
+  const { data, mediaType } = await fetchImageAsBase64(blobUrl);
+  const dataUri = `data:${mediaType};base64,${data}`;
+
+  let res: Response;
+  try {
+    res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `${EXTRACT_PROMPT}\n\nReturn a JSON object with keys "merchant", "items" (array of {name, unitPrice, qty, lineTotal, lowConfidence}), and "totals" {subtotal, tax, service, tip, extras, discount, grandTotal}.`,
+                },
+                { type: 'image_url', image_url: { url: dataUri } },
+              ],
+            },
+          ],
+        }),
+      },
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'unknown error';
+    throw errors.upstream(`Gemini vision (${model}) request failed: ${msg}`);
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw errors.upstream(
+      `Gemini vision (${model}) failed: ${res.status} ${body.slice(0, 200)}`,
+    );
+  }
+
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const text = json.choices?.[0]?.message?.content;
+  if (!text) throw errors.upstream('Gemini returned an empty response.');
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw errors.upstream('Gemini did not return valid JSON.');
+  }
 }
 
 async function extractWithClaude(blobUrl: string): Promise<unknown> {

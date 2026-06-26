@@ -133,6 +133,7 @@ pnpm dev                        # http://localhost:3000
 | `TURSO_AUTH_TOKEN` | `turso db tokens create <name>` (empty for local file) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel → Storage → Blob → read/write token |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | [console.anthropic.com](https://console.anthropic.com) → API Keys |
+| `GEMINI_API_KEY` / `GEMINI_VISION_MODEL` | [aistudio.google.com](https://aistudio.google.com) → Get API key (free; default reader for the Exact engine) |
 | `GROQ_API_KEY` / `GROQ_VISION_MODEL` / `GROQ_LOGIC_MODEL` | [console.groq.com](https://console.groq.com) → API Keys |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | [console.upstash.com](https://console.upstash.com) → Redis → REST API |
 

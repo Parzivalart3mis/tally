@@ -6,6 +6,9 @@ import { requireUserId, requireUser } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { createPersonSchema } from '@/lib/schemas';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 export const GET = route(async (req: Request) => {
   const userId = await requireUserId();
   const includeArchived =

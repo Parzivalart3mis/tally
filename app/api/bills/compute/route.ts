@@ -5,6 +5,9 @@ import { computeRequestSchema } from '@/lib/schemas';
 import { computeWithEngine } from '@/lib/engines';
 import type { ComputeInput } from '@/lib/types';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 export const POST = route(async (req: Request) => {
   const userId = await requireUser();
   await enforceRateLimit('compute', userId);

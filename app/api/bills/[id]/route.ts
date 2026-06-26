@@ -10,6 +10,9 @@ import { route, jsonOk, errors } from '@/lib/api';
 import { requireUserId, requireUser } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/ratelimit';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 type Ctx = { params: Promise<{ id: string }> };
 
 export const GET = route(async (_req: Request, ctx: Ctx) => {

@@ -4,6 +4,9 @@ import { enforceRateLimit } from '@/lib/ratelimit';
 import { extractRequestSchema } from '@/lib/schemas';
 import { extractReceipt } from '@/lib/extract';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 export const POST = route(async (req: Request) => {
   const userId = await requireUser();
   await enforceRateLimit('extract', userId);

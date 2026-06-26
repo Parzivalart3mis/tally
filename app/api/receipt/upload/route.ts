@@ -5,6 +5,9 @@ import { route, jsonOk, errors } from '@/lib/api';
 import { requireUser } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/ratelimit';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 export const runtime = 'nodejs';
 
 const MAX_BYTES = 12 * 1024 * 1024; // 12MB raw upload (phone photos run large)

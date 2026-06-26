@@ -7,6 +7,9 @@ import { enforceRateLimit } from '@/lib/ratelimit';
 import { listBillsQuerySchema, saveBillRequestSchema } from '@/lib/schemas';
 import { persistBill } from '@/lib/persist-bill';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 const PAGE_SIZE = 12;
 
 export const GET = route(async (req: Request) => {

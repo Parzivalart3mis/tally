@@ -6,6 +6,9 @@ import { requireUser } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { updatePersonSchema } from '@/lib/schemas';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 type Ctx = { params: Promise<{ id: string }> };
 
 export const PATCH = route(async (req: Request, ctx: Ctx) => {

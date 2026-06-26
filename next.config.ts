@@ -41,6 +41,18 @@ const nextConfig: NextConfig = {
     return [
       { source: '/(.*)', headers: securityHeaders },
       {
+        // API responses must never be cached at the edge/CDN/browser. Without
+        // this, Vercel cached a transient 404 for POST /api/bills(/compute) and
+        // replayed it (cache HIT /404) until the TTL expired — the function
+        // never ran. no-store keeps every request hitting the function.
+        source: '/api/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Vercel-CDN-Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
         source: '/sw.js',
         headers: [
           { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },

@@ -5,6 +5,9 @@ import { route, jsonOk } from '@/lib/api';
 import { requireUserId } from '@/lib/auth';
 import { searchQuerySchema } from '@/lib/schemas';
 
+// Always run the function; never serve a cached (edge) response.
+export const dynamic = 'force-dynamic';
+
 export const GET = route(async (req: Request) => {
   const userId = await requireUserId();
   const { q } = searchQuerySchema.parse(

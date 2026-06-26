@@ -2,7 +2,7 @@
  * Caches the shell on install; network-first elsewhere with a cache fallback.
  * Required for the Android install prompt; iOS accepts it too.
  */
-const CACHE = 'tally-shell-v1';
+const CACHE = 'tally-shell-v2';
 const SHELL = [
   '/',
   '/manifest.webmanifest',

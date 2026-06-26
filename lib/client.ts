@@ -30,8 +30,26 @@ async function handle<T>(res: Response): Promise<T> {
   throw new ApiClientError(res.status, code, message);
 }
 
+/**
+ * Fetch with a single retry on a transient 404/401. These statuses mean the
+ * request was not processed — either an edge-cached 404 or a Clerk session
+ * token mid-refresh — so re-sending cannot double-apply a mutation. A short
+ * delay gives Clerk's client time to refresh the token.
+ */
+async function fetchWithRetry(
+  input: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status !== 404 && res.status !== 401) return res;
+  await new Promise((r) => setTimeout(r, 700));
+  return fetch(input, init);
+}
+
 export async function apiGet<T>(url: string): Promise<T> {
-  return handle<T>(await fetch(url, { headers: { Accept: 'application/json' } }));
+  return handle<T>(
+    await fetchWithRetry(url, { headers: { Accept: 'application/json' } }),
+  );
 }
 
 export async function apiSend<T>(
@@ -44,11 +62,11 @@ export async function apiSend<T>(
     headers: { 'Content-Type': 'application/json' },
   };
   if (body !== undefined) init.body = JSON.stringify(body);
-  return handle<T>(await fetch(url, init));
+  return handle<T>(await fetchWithRetry(url, init));
 }
 
 export async function apiUpload<T>(url: string, file: File): Promise<T> {
   const form = new FormData();
   form.append('file', file);
-  return handle<T>(await fetch(url, { method: 'POST', body: form }));
+  return handle<T>(await fetchWithRetry(url, { method: 'POST', body: form }));
 }

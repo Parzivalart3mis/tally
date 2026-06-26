@@ -118,16 +118,20 @@ export function SplitFlow({
       }>('/api/receipt/extract', 'POST', { blobUrl, engine });
 
       if (data.merchant) setTitle(data.merchant);
-      setItems(
-        data.items.map((it) => ({
-          id: newId(),
-          name: it.name,
-          unitPrice: money(Math.round(it.unitPrice * 100)),
-          qty: String(it.qty || 1),
-          lineTotal: money(Math.round(it.lineTotal * 100)),
-          ...(it.lowConfidence ? { lowConfidence: true } : {}),
-        })),
-      );
+      const mapped = data.items.map((it) => ({
+        id: newId(),
+        name: it.name,
+        unitPrice: money(Math.round(it.unitPrice * 100)),
+        qty: String(it.qty || 1),
+        lineTotal: money(Math.round(it.lineTotal * 100)),
+        ...(it.lowConfidence ? { lowConfidence: true } : {}),
+      }));
+      // If nothing was read, still go to review with a blank line so the user
+      // can add items by hand rather than seeing an empty screen.
+      setItems(mapped.length > 0 ? mapped : [blankItem()]);
+      if (mapped.length === 0) {
+        toast.message('No items detected — add them by hand in review.');
+      }
       setTotals({
         subtotal: money(Math.round((data.totals.subtotal ?? 0) * 100)),
         tax: money(Math.round((data.totals.tax ?? 0) * 100)),

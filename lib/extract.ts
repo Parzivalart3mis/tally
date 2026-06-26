@@ -102,30 +102,37 @@ async function extractWithClaude(blobUrl: string): Promise<unknown> {
   const client = new Anthropic({ apiKey });
   const { data, mediaType } = await fetchImageAsBase64(blobUrl);
 
-  const msg = await client.messages.create({
-    model,
-    max_tokens: 2048,
-    tools: [
-      {
-        name: 'record_receipt',
-        description: 'Record the line items and totals read from the receipt.',
-        input_schema: RECEIPT_JSON_SCHEMA,
-      },
-    ],
-    tool_choice: { type: 'tool', name: 'record_receipt' },
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data },
-          },
-          { type: 'text', text: EXTRACT_PROMPT },
-        ],
-      },
-    ],
-  });
+  let msg;
+  try {
+    msg = await client.messages.create({
+      model,
+      max_tokens: 2048,
+      tools: [
+        {
+          name: 'record_receipt',
+          description:
+            'Record the line items and totals read from the receipt.',
+          input_schema: RECEIPT_JSON_SCHEMA,
+        },
+      ],
+      tool_choice: { type: 'tool', name: 'record_receipt' },
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data },
+            },
+            { type: 'text', text: EXTRACT_PROMPT },
+          ],
+        },
+      ],
+    });
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : 'unknown error';
+    throw errors.upstream(`Claude vision (${model}) failed: ${detail}`);
+  }
 
   const block = msg.content.find((b) => b.type === 'tool_use');
   if (!block || block.type !== 'tool_use') {
@@ -137,26 +144,34 @@ async function extractWithClaude(blobUrl: string): Promise<unknown> {
 async function extractWithGroq(blobUrl: string): Promise<unknown> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw errors.upstream('GROQ_API_KEY is not configured.');
-  const model = process.env.GROQ_VISION_MODEL ?? 'qwen/qwen3.6-27b';
+  const model =
+    process.env.GROQ_VISION_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct';
   const client = new Groq({ apiKey });
 
-  const res = await client.chat.completions.create({
-    model,
-    temperature: 0,
-    response_format: { type: 'json_object' },
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `${EXTRACT_PROMPT}\n\nReturn a JSON object with keys "merchant", "items" (array of {name, unitPrice, qty, lineTotal, lowConfidence}), and "totals" {subtotal, tax, service, tip, extras, discount, grandTotal}.`,
-          },
-          { type: 'image_url', image_url: { url: blobUrl } },
-        ],
-      },
-    ],
-  });
+  let res;
+  try {
+    res = await client.chat.completions.create({
+      model,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `${EXTRACT_PROMPT}\n\nReturn a JSON object with keys "merchant", "items" (array of {name, unitPrice, qty, lineTotal, lowConfidence}), and "totals" {subtotal, tax, service, tip, extras, discount, grandTotal}.`,
+            },
+            { type: 'image_url', image_url: { url: blobUrl } },
+          ],
+        },
+      ],
+    });
+  } catch (e) {
+    // Surface the real reason (model/vision/size error) instead of a 500.
+    const msg = e instanceof Error ? e.message : 'unknown error';
+    throw errors.upstream(`Groq vision (${model}) failed: ${msg}`);
+  }
 
   const text = res.choices[0]?.message?.content;
   if (!text) throw errors.upstream('Groq returned an empty response.');

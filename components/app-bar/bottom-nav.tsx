@@ -14,6 +14,9 @@ const TABS = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  // The split flow pins its own action bar; hide the global nav there.
+  if (pathname.startsWith('/app/new')) return null;
+
   return (
     <nav
       aria-label="Primary"

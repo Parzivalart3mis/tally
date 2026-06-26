@@ -39,13 +39,12 @@ export async function apiSend<T>(
   method: 'POST' | 'PATCH' | 'DELETE',
   body?: unknown,
 ): Promise<T> {
-  return handle<T>(
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    }),
-  );
+  const init: RequestInit = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body !== undefined) init.body = JSON.stringify(body);
+  return handle<T>(await fetch(url, init));
 }
 
 export async function apiUpload<T>(url: string, file: File): Promise<T> {

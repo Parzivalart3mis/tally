@@ -10,10 +10,10 @@ interface SumCheckBadgeProps {
   match: boolean;
   participantSum: number;
   grandTotal: number;
-  centAdjustment?: number;
+  centAdjustment?: number | undefined;
   engine: SplitEngineId;
   /** For model engines: whether code re-verification agreed. */
-  verified?: boolean;
+  verified?: boolean | undefined;
   currency?: string;
 }
 

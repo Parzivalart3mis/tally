@@ -55,6 +55,14 @@ export function PersonChip({
     );
   }
 
+  const anim = reduce
+    ? {}
+    : {
+        whileTap: { scale: 0.92 },
+        animate: { scale: selected ? 1.06 : 1 },
+        transition: { type: 'spring' as const, stiffness: 500, damping: 18 },
+      };
+
   return (
     <motion.button
       type="button"
@@ -63,9 +71,7 @@ export function PersonChip({
       disabled={disabled}
       onClick={onToggle}
       className={className}
-      whileTap={reduce ? undefined : { scale: 0.92 }}
-      animate={reduce ? undefined : { scale: selected ? 1.06 : 1 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+      {...anim}
     >
       {content}
     </motion.button>

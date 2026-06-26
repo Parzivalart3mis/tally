@@ -78,15 +78,19 @@ const RECEIPT_JSON_SCHEMA = {
   required: ['items', 'totals'],
 };
 
-/** Route extraction to the right vision model for the chosen engine. */
+/**
+ * Route extraction to a vision model. Only the Claude engine reads with Claude
+ * vision; the Exact (default) and Groq engines read with the cheaper Groq
+ * vision model, so the default path never spends Anthropic credits.
+ */
 export async function extractReceipt(
   blobUrl: string,
   engine: SplitEngineId,
 ): Promise<ExtractedReceiptDto> {
   const raw =
-    engine === 'GROQ'
-      ? await extractWithGroq(blobUrl)
-      : await extractWithClaude(blobUrl);
+    engine === 'CLAUDE_PROMPT'
+      ? await extractWithClaude(blobUrl)
+      : await extractWithGroq(blobUrl);
   // Validate/normalize whatever the model returned.
   return extractedReceiptSchema.parse(raw);
 }

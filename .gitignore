@@ -28,6 +28,8 @@ pnpm-debug.log*
 # database (local dev)
 local.db
 local.db-*
+e2e-local.db
+e2e-local.db-*
 *.sqlite
 *.sqlite-*
 

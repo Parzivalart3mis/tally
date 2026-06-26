@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck · Lint · Test · Build
+    runs-on: ubuntu-latest
+    env:
+      # Build-time placeholders (well-formed dummy Clerk keys; no secrets).
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_bGlnaHQtdGFsbHktNDIuY2xlcmsuYWNjb3VudHMuZGV2JA==
+      CLERK_SECRET_KEY: sk_test_ZHVtbXktc2VjcmV0LW5vdC1yZWFsLTE3ODIzOTQ0
+      TURSO_DATABASE_URL: file:./local.db
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit + integration tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  e2e:
+    name: Playwright (Vercel preview)
+    runs-on: ubuntu-latest
+    needs: quality
+    # Only runs when a preview URL is provided (set PLAYWRIGHT_BASE_URL as a
+    # repo variable pointing at the Vercel preview deploy).
+    if: ${{ vars.PLAYWRIGHT_BASE_URL != '' }}
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Run E2E flows
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

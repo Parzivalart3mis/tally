@@ -12,7 +12,7 @@ export function AppBar() {
 
   return (
     <header className="safe-top sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur-md">
-      <div className="safe-x mx-auto flex h-14 w-full max-w-3xl items-center gap-2 px-4">
+      <div className="safe-x mx-auto flex h-14 w-full max-w-3xl items-center gap-2">
         <Link
           href="/app"
           aria-label="Tally home"

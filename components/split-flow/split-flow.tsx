@@ -443,7 +443,7 @@ export function SplitFlow({
 
       {/* Pinned bottom action bar (clears the hidden bottom nav on this route) */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/90 backdrop-blur-md">
-        <div className="safe-x mx-auto flex w-full max-w-3xl items-center gap-2 px-4 py-3">
+        <div className="safe-x mx-auto flex w-full max-w-3xl items-center gap-2 py-3">
           {bar.back ? (
             <Button variant="ghost" size="icon" aria-label="Back" onClick={bar.back}>
               <ArrowLeft className="size-4" />

@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Tally",
   "short_name": "Tally",
   "description": "Split a bill from a receipt, exactly.",

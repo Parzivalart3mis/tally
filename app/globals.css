@@ -86,9 +86,12 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+  /* Horizontal gutter that also clears the safe-area inset. Uses max() so it
+     is additive: in portrait (insets = 0) the base 1rem gutter still applies,
+     and it never competes with a separate px-* on the same element. */
   .safe-x {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
   }
 
   /* coin-divider motif backdrop used on the marketing hero */

@@ -2,12 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-  type Transition,
-} from 'framer-motion';
+import { motion, useReducedMotion, type Transition } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiSend, apiUpload, ApiClientError } from '@/lib/client';
@@ -385,14 +380,16 @@ export function SplitFlow({
       <Stepper current={step} />
 
       <div className="relative overflow-hidden">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={step}
-            initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduce ? { opacity: 0 } : { opacity: 0, x: -24 }}
-            transition={stepTransition}
-          >
+        {/* A keyed motion.div (NOT AnimatePresence mode="wait") — the active
+            step always mounts immediately on key change and plays its entrance.
+            mode="wait" intermittently failed to mount the next step under React
+            19 (its exit's onComplete didn't fire), leaving a blank body. */}
+        <motion.div
+          key={step}
+          initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={stepTransition}
+        >
             {step === 'upload' && (
               <UploadStep
                 engine={engine}
@@ -441,8 +438,7 @@ export function SplitFlow({
                 verification={verification}
               />
             )}
-          </motion.div>
-        </AnimatePresence>
+        </motion.div>
       </div>
 
       {/* Pinned bottom action bar (clears the hidden bottom nav on this route) */}

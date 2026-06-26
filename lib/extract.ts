@@ -117,7 +117,7 @@ export async function extractReceipt(
 async function extractWithGemini(blobUrl: string): Promise<unknown> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw errors.upstream('GEMINI_API_KEY is not configured.');
-  const model = process.env.GEMINI_VISION_MODEL ?? 'gemini-2.0-flash';
+  const model = process.env.GEMINI_VISION_MODEL ?? 'gemini-2.5-flash';
 
   // Send the (already sharp-normalized) image as a base64 data URI.
   const { data, mediaType } = await fetchImageAsBase64(blobUrl);

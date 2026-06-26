@@ -31,19 +31,24 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 /**
- * Fetch with a single retry on a transient 404/401. These statuses mean the
- * request was not processed — either an edge-cached 404 or a Clerk session
- * token mid-refresh — so re-sending cannot double-apply a mutation. A short
- * delay gives Clerk's client time to refresh the token.
+ * Fetch with backoff retries on a transient 404/401. These statuses mean the
+ * request was NOT processed — an edge-cached 404 during the post-deploy
+ * propagation window, or a Clerk token mid-refresh — so re-sending cannot
+ * double-apply a mutation (no duplicate bills). Spreading retries over ~12s
+ * lets a brief post-deploy cache window clear without the user waiting.
  */
 async function fetchWithRetry(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
-  const res = await fetch(input, init);
-  if (res.status !== 404 && res.status !== 401) return res;
-  await new Promise((r) => setTimeout(r, 700));
-  return fetch(input, init);
+  const delays = [800, 1500, 3000, 6000]; // ~11s across 4 retries
+  let res = await fetch(input, init);
+  for (const delay of delays) {
+    if (res.status !== 404 && res.status !== 401) return res;
+    await new Promise((r) => setTimeout(r, delay));
+    res = await fetch(input, init);
+  }
+  return res;
 }
 
 export async function apiGet<T>(url: string): Promise<T> {

@@ -141,6 +141,48 @@ export async function getBillDetail(userId: string, id: string) {
   return { bill, participants, items, assignments };
 }
 
+/** All completed bills with their participants + items, for data export. */
+export async function getBillsForExport(userId: string) {
+  const billRows = await db
+    .select()
+    .from(bills)
+    .where(and(eq(bills.userId, userId), eq(bills.status, 'COMPLETED')))
+    .orderBy(desc(bills.createdAt));
+  const ids = billRows.map((b) => b.id);
+  const parts = ids.length
+    ? await db
+        .select()
+        .from(billParticipants)
+        .where(inArray(billParticipants.billId, ids))
+        .orderBy(asc(billParticipants.nameSnapshot))
+    : [];
+  const items = ids.length
+    ? await db
+        .select()
+        .from(billItems)
+        .where(inArray(billItems.billId, ids))
+        .orderBy(asc(billItems.position))
+    : [];
+
+  const group = <T extends { billId: string }>(rows: T[]) => {
+    const m = new Map<string, T[]>();
+    for (const r of rows) {
+      const arr = m.get(r.billId) ?? [];
+      arr.push(r);
+      m.set(r.billId, arr);
+    }
+    return m;
+  };
+  const pBy = group(parts);
+  const iBy = group(items);
+
+  return billRows.map((b) => ({
+    ...b,
+    participants: pBy.get(b.id) ?? [],
+    items: iBy.get(b.id) ?? [],
+  }));
+}
+
 export async function listPeople(userId: string, includeArchived = false) {
   return db
     .select()

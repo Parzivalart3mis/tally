@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, Trash2, Users, X, Pencil, UserRound } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Users,
+  X,
+  Pencil,
+  UserRound,
+  Download,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { apiSend } from '@/lib/client';
 import { initials } from '@/lib/format';
@@ -318,6 +326,30 @@ export function PeopleManager({
             })}
           </ul>
         )}
+      </section>
+
+      {/* Export */}
+      <section className="space-y-2">
+        <div>
+          <h2 className="text-lg font-semibold">Export</h2>
+          <p className="text-sm text-text-muted">
+            Download all your bills as a backup.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="secondary">
+            <a href="/api/export?format=csv" download>
+              <Download className="size-4" />
+              CSV
+            </a>
+          </Button>
+          <Button asChild variant="secondary">
+            <a href="/api/export?format=json" download>
+              <Download className="size-4" />
+              JSON
+            </a>
+          </Button>
+        </div>
       </section>
     </div>
   );

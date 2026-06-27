@@ -16,6 +16,8 @@ export interface BillCardData {
   receiptImageUrl: string | null;
   createdAt: string;
   participantNames: string[];
+  tags?: string[];
+  paidByName?: string | null;
 }
 
 export function BillCard({ bill }: { bill: BillCardData }) {
@@ -48,7 +50,22 @@ export function BillCard({ bill }: { bill: BillCardData }) {
             {formatCents(bill.grandTotalCents)}
           </p>
         </div>
-        <p className="text-xs text-text-muted">{formatDay(bill.createdAt)}</p>
+        <p className="text-xs text-text-muted">
+          {formatDay(bill.createdAt)}
+          {bill.paidByName ? ` · ${bill.paidByName} paid` : ''}
+        </p>
+        {bill.tags && bill.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {bill.tags.slice(0, 3).map((t) => (
+              <span
+                key={t}
+                className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-accent"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="mt-0.5 flex flex-wrap items-center gap-1">
           {bill.participantNames.slice(0, 4).map((name) => (
             <span

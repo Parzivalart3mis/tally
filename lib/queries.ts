@@ -1,5 +1,15 @@
 import 'server-only';
-import { and, asc, count, desc, eq, inArray, like } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  like,
+  lte,
+} from 'drizzle-orm';
 import { db } from '@/db';
 import {
   bills,
@@ -17,16 +27,45 @@ export type BillListItem = Awaited<
   ReturnType<typeof listBills>
 >['bills'][number];
 
+export interface BillFilters {
+  q?: string;
+  page?: number;
+  tag?: string;
+  person?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  minCents?: number;
+  maxCents?: number;
+}
+
 /** Paginated, user-scoped bill history with snapshot participant names. */
-export async function listBills(
-  userId: string,
-  opts: { q?: string; page?: number } = {},
-) {
+export async function listBills(userId: string, opts: BillFilters = {}) {
   const page = opts.page && opts.page > 0 ? opts.page : 1;
   const conditions = [eq(bills.userId, userId), eq(bills.status, 'COMPLETED')];
   if (opts.q && opts.q.trim()) {
     conditions.push(like(bills.title, `%${opts.q.trim()}%`));
   }
+  if (opts.tag && opts.tag.trim()) {
+    // tags are stored as a JSON array, e.g. ["dinner","trip"]
+    conditions.push(like(bills.tags, `%"${opts.tag.trim().toLowerCase()}"%`));
+  }
+  if (opts.person && opts.person.trim()) {
+    conditions.push(
+      inArray(
+        bills.id,
+        db
+          .select({ billId: billParticipants.billId })
+          .from(billParticipants)
+          .where(eq(billParticipants.nameSnapshot, opts.person.trim())),
+      ),
+    );
+  }
+  if (opts.dateFrom) conditions.push(gte(bills.createdAt, opts.dateFrom));
+  if (opts.dateTo) conditions.push(lte(bills.createdAt, opts.dateTo));
+  if (opts.minCents != null)
+    conditions.push(gte(bills.grandTotalCents, opts.minCents));
+  if (opts.maxCents != null)
+    conditions.push(lte(bills.grandTotalCents, opts.maxCents));
   const where = and(...conditions);
 
   const rows = await db
@@ -112,6 +151,17 @@ export async function listPeople(userId: string, includeArchived = false) {
         : and(eq(people.userId, userId), eq(people.archived, false)),
     )
     .orderBy(asc(people.name));
+}
+
+/** Distinct tags used across the user's bills, sorted. */
+export async function getUsedTags(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ tags: bills.tags })
+    .from(bills)
+    .where(eq(bills.userId, userId));
+  const set = new Set<string>();
+  for (const r of rows) for (const t of r.tags ?? []) set.add(t);
+  return [...set].sort();
 }
 
 /** The roster person the user marked as "me" (or null). */

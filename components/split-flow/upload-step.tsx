@@ -45,11 +45,12 @@ export function UploadStep({
         />
       )}
 
+      {/* No `capture` — let the OS picker offer Photo Library, Take Photo,
+          and Choose File (and allow selecting multiple library photos). */}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         className="sr-only"
         onChange={(e) => {

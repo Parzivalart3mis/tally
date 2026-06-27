@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { requireUserId } from '@/lib/auth';
-import { getBillDetail } from '@/lib/queries';
+import { getBillDetail, getSelfPersonId } from '@/lib/queries';
 import { formatDate, ENGINE_META } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,16 @@ export default async function BillDetailPage({
 }) {
   const { id } = await params;
   const userId = await requireUserId();
-  const detail = await getBillDetail(userId, id);
+  const [detail, selfId] = await Promise.all([
+    getBillDetail(userId, id),
+    getSelfPersonId(userId),
+  ]);
   if (!detail) notFound();
 
   const { bill, participants, items, assignments } = detail;
+  const selfName =
+    participants.find((p) => p.personId && p.personId === selfId)
+      ?.nameSnapshot ?? null;
 
   const nameByBp = new Map(participants.map((p) => [p.id, p.nameSnapshot]));
   const sharesByItem = new Map<string, { name: string; shareCents: number }[]>();
@@ -72,10 +78,21 @@ export default async function BillDetailPage({
             </h1>
             <p className="text-sm text-text-muted">
               {formatDate(bill.createdAt)}
+              {bill.paidByName ? ` · ${bill.paidByName} paid` : ''}
             </p>
           </div>
           <Badge variant="accent">{ENGINE_META[bill.engine].label}</Badge>
         </div>
+
+        {bill.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {bill.tags.map((t) => (
+              <Badge key={t} variant="neutral">
+                {t}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {bill.receiptImageUrl && (
           <div className="overflow-hidden rounded-card border border-border bg-surface-2">
@@ -92,6 +109,8 @@ export default async function BillDetailPage({
       <ResultView
         engine={bill.engine}
         currency={bill.currency}
+        selfName={selfName}
+        payerName={bill.paidByName}
         items={viewItems}
         participants={viewParticipants}
         totals={{

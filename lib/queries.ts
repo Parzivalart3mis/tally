@@ -8,6 +8,7 @@ import {
   itemAssignments,
   people,
   presets,
+  users,
 } from '@/db/schema';
 
 export const BILLS_PAGE_SIZE = 12;
@@ -111,6 +112,15 @@ export async function listPeople(userId: string, includeArchived = false) {
         : and(eq(people.userId, userId), eq(people.archived, false)),
     )
     .orderBy(asc(people.name));
+}
+
+/** The roster person the user marked as "me" (or null). */
+export async function getSelfPersonId(userId: string): Promise<string | null> {
+  const [u] = await db
+    .select({ selfPersonId: users.selfPersonId })
+    .from(users)
+    .where(eq(users.id, userId));
+  return u?.selfPersonId ?? null;
 }
 
 export async function listPresets(userId: string) {

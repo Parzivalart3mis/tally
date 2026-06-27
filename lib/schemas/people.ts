@@ -47,6 +47,10 @@ export const updatePresetSchema = z
     message: 'Nothing to update',
   });
 
+export const setSelfSchema = z
+  .object({ selfPersonId: z.string().min(1).max(64).nullable() })
+  .strict();
+
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;
 export type UpdatePersonInput = z.infer<typeof updatePersonSchema>;
 export type CreatePresetInput = z.infer<typeof createPresetSchema>;

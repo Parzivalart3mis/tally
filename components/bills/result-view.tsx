@@ -1,6 +1,7 @@
 'use client';
 
 import { formatCents } from '@/lib/money';
+import { cn } from '@/lib/utils';
 import { initials } from '@/lib/format';
 import type { SplitEngineId } from '@/lib/types';
 import { CountUpCents } from '@/components/motion/count-up';
@@ -38,6 +39,10 @@ export interface ResultViewProps {
   sumCheck: { participantSum: number; grandTotal: number; match: boolean };
   verified?: boolean;
   animateTotals?: boolean;
+  /** Name of the "me" participant — its row is emphasized. */
+  selfName?: string | null | undefined;
+  /** Name of who paid — its row gets a "paid" badge. */
+  payerName?: string | null | undefined;
 }
 
 export function ResultView({
@@ -49,6 +54,8 @@ export function ResultView({
   sumCheck,
   verified,
   animateTotals = false,
+  selfName,
+  payerName,
 }: ResultViewProps) {
   const adjuster = participants.find((p) => p.centAdjustment !== 0);
 
@@ -79,31 +86,49 @@ export function ResultView({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {participants.map((p) => (
-              <tr key={p.name}>
-                <td className="px-4 py-2.5">
-                  <span className="flex items-center gap-2">
-                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-[10px] font-semibold text-accent">
-                      {initials(p.name)}
+            {participants.map((p) => {
+              const isSelf = !!selfName && p.name === selfName;
+              const isPayer = !!payerName && p.name === payerName;
+              return (
+                <tr key={p.name} className={isSelf ? 'bg-accent-soft/40' : ''}>
+                  <td className="px-4 py-2.5">
+                    <span className="flex items-center gap-2">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-[10px] font-semibold text-accent">
+                        {initials(p.name)}
+                      </span>
+                      <span
+                        className={cn('truncate', isSelf && 'font-semibold')}
+                      >
+                        {isSelf ? 'You' : p.name}
+                      </span>
+                      {isPayer && (
+                        <span className="rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                          paid
+                        </span>
+                      )}
                     </span>
-                    <span className="truncate">{p.name}</span>
-                  </span>
-                </td>
-                <td className="px-2 py-2.5 text-right text-text-muted tabular">
-                  {formatCents(p.subtotalCents, currency)}
-                </td>
-                <td className="px-2 py-2.5 text-right text-text-muted tabular">
-                  {formatCents(p.taxExtrasCents, currency)}
-                </td>
-                <td className="px-4 py-2.5 text-right font-semibold text-highlight tabular">
-                  {animateTotals ? (
-                    <CountUpCents value={p.totalCents} currency={currency} />
-                  ) : (
-                    formatCents(p.totalCents, currency)
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-2 py-2.5 text-right text-text-muted tabular">
+                    {formatCents(p.subtotalCents, currency)}
+                  </td>
+                  <td className="px-2 py-2.5 text-right text-text-muted tabular">
+                    {formatCents(p.taxExtrasCents, currency)}
+                  </td>
+                  <td
+                    className={cn(
+                      'px-4 py-2.5 text-right font-semibold text-highlight tabular',
+                      isSelf && 'text-lg',
+                    )}
+                  >
+                    {animateTotals ? (
+                      <CountUpCents value={p.totalCents} currency={currency} />
+                    ) : (
+                      formatCents(p.totalCents, currency)
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border bg-surface-2">

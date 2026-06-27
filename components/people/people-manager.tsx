@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, Trash2, Users, X, Pencil } from 'lucide-react';
+import { Plus, Trash2, Users, X, Pencil, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiSend } from '@/lib/client';
 import { initials } from '@/lib/format';
@@ -74,15 +74,29 @@ function ColorSwatches({
 export function PeopleManager({
   initialPeople,
   initialPresets,
+  initialSelfId,
 }: {
   initialPeople: PersonDto[];
   initialPresets: PresetDto[];
+  initialSelfId?: string | null;
 }) {
   const [people, setPeople] = useState(initialPeople);
   const [presets, setPresets] = useState(initialPresets);
+  const [selfId, setSelfId] = useState<string | null>(initialSelfId ?? null);
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+
+  async function setSelf(id: string | null) {
+    const prev = selfId;
+    setSelfId(id);
+    try {
+      await apiSend('/api/me', 'PATCH', { selfPersonId: id });
+    } catch (err) {
+      setSelfId(prev);
+      toast.error(err instanceof Error ? err.message : 'Could not update.');
+    }
+  }
 
   async function addPerson(e: React.FormEvent) {
     e.preventDefault();
@@ -188,13 +202,39 @@ export function PeopleManager({
                     {initials(person.name)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-text">{person.name}</p>
+                    <p className="flex items-center gap-1.5 truncate text-text">
+                      {person.name}
+                      {selfId === person.id && (
+                        <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                          You
+                        </span>
+                      )}
+                    </p>
                     {person.note && (
                       <p className="truncate text-xs text-text-muted">
                         {person.note}
                       </p>
                     )}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={
+                      selfId === person.id
+                        ? `Unset ${person.name} as you`
+                        : `Set ${person.name} as you`
+                    }
+                    onClick={() =>
+                      setSelf(selfId === person.id ? null : person.id)
+                    }
+                  >
+                    <UserRound
+                      className={cn(
+                        'size-4',
+                        selfId === person.id ? 'text-accent' : 'text-text-hint',
+                      )}
+                    />
+                  </Button>
                   <PersonEditDialog
                     person={person}
                     onSaved={(updated) =>

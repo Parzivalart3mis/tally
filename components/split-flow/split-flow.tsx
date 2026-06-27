@@ -38,9 +38,11 @@ function money(n: number): string {
 export function SplitFlow({
   roster,
   presets,
+  selfName,
 }: {
   roster: RosterPerson[];
   presets: RosterPreset[];
+  selfName?: string | null;
 }) {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -54,6 +56,8 @@ export function SplitFlow({
   const [totals, setTotals] = useState<DraftTotals>(EMPTY_TOTALS);
   const [assignments, setAssignments] = useState<Record<string, string[]>>({});
   const [extras, setExtras] = useState<string[]>([]);
+  const [paidBy, setPaidBy] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const [result, setResult] = useState<ComputeResponse['result'] | null>(null);
   const [verification, setVerification] =
     useState<ComputeResponse['verification']>(null);
@@ -303,6 +307,8 @@ export function SplitFlow({
           engine,
           receiptImageUrl: blobUrl,
           currency: 'USD',
+          paidByName: paidBy,
+          tags,
           items: payload.items,
           totals: payload.totals,
           assignments: payload.assignments,
@@ -436,6 +442,12 @@ export function SplitFlow({
                 result={result}
                 engine={engine}
                 verification={verification}
+                participantNames={participantNames}
+                paidBy={paidBy}
+                onPaidBy={setPaidBy}
+                tags={tags}
+                onTags={setTags}
+                selfName={selfName ?? null}
               />
             )}
         </motion.div>

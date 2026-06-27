@@ -1,14 +1,15 @@
 import { requireUserId } from '@/lib/auth';
-import { listPeople, listPresets } from '@/lib/queries';
+import { listPeople, listPresets, getSelfPersonId } from '@/lib/queries';
 import { PeopleManager } from '@/components/people/people-manager';
 
 export const metadata = { title: 'People' };
 
 export default async function PeoplePage() {
   const userId = await requireUserId();
-  const [people, presets] = await Promise.all([
+  const [people, presets, selfId] = await Promise.all([
     listPeople(userId),
     listPresets(userId),
+    getSelfPersonId(userId),
   ]);
 
   return (
@@ -24,6 +25,7 @@ export default async function PeoplePage() {
         name: p.name,
         memberIds: p.memberIds,
       }))}
+      initialSelfId={selfId}
     />
   );
 }

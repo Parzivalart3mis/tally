@@ -7,6 +7,7 @@ import {
   itemName,
   billTitle,
   personName,
+  boundedName,
 } from './common';
 
 export const engineSchema = z.enum(SPLIT_ENGINES);
@@ -161,6 +162,8 @@ export const saveBillRequestSchema = z
     engine: engineSchema,
     receiptImageUrl: z.string().url().max(2048).nullish(),
     currency: z.string().length(3).default('USD'),
+    paidByName: personName.nullish(),
+    tags: z.array(boundedName(40)).max(20).optional(),
     items: z.array(computeItemSchema).min(1).max(200),
     totals: totalsCentsSchema,
     assignments: assignmentsSchema,

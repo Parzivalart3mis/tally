@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Camera, Loader2, ImageUp } from 'lucide-react';
 import { EnginePicker } from '@/components/engine-picker/engine-picker';
+import { ImageEditor } from '@/components/split-flow/image-editor';
 import type { SplitEngineId } from '@/lib/types';
 
 export function UploadStep({
@@ -21,25 +22,39 @@ export function UploadStep({
   extracting: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [editorFiles, setEditorFiles] = useState<File[] | null>(null);
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">New bill</h1>
         <p className="text-sm text-text-muted">
-          Photograph or pick a receipt. A model reads its items and totals.
+          Photograph or pick a receipt. Crop, rotate, or add pages, then a model
+          reads its items and totals.
         </p>
       </div>
+
+      {editorFiles && (
+        <ImageEditor
+          files={editorFiles}
+          onUse={(file) => {
+            setEditorFiles(null);
+            onFile(file);
+          }}
+          onCancel={() => setEditorFiles(null)}
+        />
+      )}
 
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
         capture="environment"
+        multiple
         className="sr-only"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
+          const fs = Array.from(e.target.files ?? []);
+          if (fs.length) setEditorFiles(fs);
           e.target.value = '';
         }}
       />

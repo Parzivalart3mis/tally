@@ -30,11 +30,11 @@ export const GET = route(async (req: Request) => {
 export const POST = route(async (req: Request) => {
   const userId = await requireUser();
   await enforceRateLimit('write', userId);
-  const { name } = await parseJson(req, createPersonSchema);
+  const data = await parseJson(req, createPersonSchema);
 
   const [person] = await db
     .insert(people)
-    .values({ userId, name })
+    .values({ userId, ...data })
     .returning();
 
   return jsonOk({ person }, { status: 201 });

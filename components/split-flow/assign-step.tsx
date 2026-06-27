@@ -107,6 +107,7 @@ export function AssignStep({
                   <PersonChip
                     key={p.id}
                     name={p.name}
+                    color={p.color}
                     selected={selected.includes(p.name)}
                     onToggle={() => onToggle(item.id, p.name)}
                   />
@@ -136,6 +137,7 @@ export function AssignStep({
               <PersonChip
                 key={p.id}
                 name={p.name}
+                color={p.color}
                 selected={extras.includes(p.name)}
                 onToggle={() => onToggleExtra(p.name)}
               />

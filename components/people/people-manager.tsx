@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, Trash2, Users, X } from 'lucide-react';
+import { Plus, Trash2, Users, X, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiSend } from '@/lib/client';
 import { initials } from '@/lib/format';
+import { PERSON_COLORS, colorHex } from '@/lib/colors';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,11 +24,51 @@ import { PersonChip } from '@/components/people/person-chip';
 export interface PersonDto {
   id: string;
   name: string;
+  color?: string | null;
+  note?: string | null;
 }
 export interface PresetDto {
   id: string;
   name: string;
   memberIds: string[];
+}
+
+/** A row of selectable palette swatches (plus a "no color" option). */
+function ColorSwatches({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (c: string | null) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        aria-label="No color"
+        onClick={() => onChange(null)}
+        className={cn(
+          'grid size-7 place-items-center rounded-full border border-border bg-surface-2 text-text-hint',
+          value === null && 'ring-2 ring-accent ring-offset-2 ring-offset-bg',
+        )}
+      >
+        <X className="size-3.5" />
+      </button>
+      {PERSON_COLORS.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          aria-label={c.id}
+          onClick={() => onChange(c.id)}
+          style={{ background: c.hex }}
+          className={cn(
+            'size-7 rounded-full',
+            value === c.id && 'ring-2 ring-accent ring-offset-2 ring-offset-bg',
+          )}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function PeopleManager({
@@ -39,6 +81,7 @@ export function PeopleManager({
   const [people, setPeople] = useState(initialPeople);
   const [presets, setPresets] = useState(initialPresets);
   const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   async function addPerson(e: React.FormEvent) {
@@ -50,10 +93,13 @@ export function PeopleManager({
       const { person } = await apiSend<{ person: PersonDto }>(
         '/api/people',
         'POST',
-        { name },
+        { name, ...(newColor ? { color: newColor } : {}) },
       );
-      setPeople((p) => [...p, person].sort((a, b) => a.name.localeCompare(b.name)));
+      setPeople((p) =>
+        [...p, person].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       setNewName('');
+      setNewColor(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not add person.');
     } finally {
@@ -66,7 +112,6 @@ export function PeopleManager({
     setPeople((p) => p.filter((x) => x.id !== id));
     try {
       await apiSend(`/api/people/${id}`, 'DELETE');
-      // Drop from presets locally too.
       setPresets((ps) =>
         ps.map((pr) => ({
           ...pr,
@@ -103,18 +148,21 @@ export function PeopleManager({
           </p>
         </div>
 
-        <form onSubmit={addPerson} className="flex gap-2">
-          <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Add a person…"
-            maxLength={120}
-            aria-label="New person name"
-          />
-          <Button type="submit" disabled={adding || !newName.trim()}>
-            <Plus className="size-4" />
-            Add
-          </Button>
+        <form onSubmit={addPerson} className="space-y-2">
+          <div className="flex gap-2">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Add a person…"
+              maxLength={120}
+              aria-label="New person name"
+            />
+            <Button type="submit" disabled={adding || !newName.trim()}>
+              <Plus className="size-4" />
+              Add
+            </Button>
+          </div>
+          <ColorSwatches value={newColor} onChange={setNewColor} />
         </form>
 
         {people.length === 0 ? (
@@ -133,12 +181,30 @@ export function PeopleManager({
                   exit={{ opacity: 0, height: 0 }}
                   className="flex items-center gap-3 px-4 py-3"
                 >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
+                  <span
+                    className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold text-white"
+                    style={{ background: colorHex(person.color) }}
+                  >
                     {initials(person.name)}
                   </span>
-                  <span className="flex-1 truncate text-text">
-                    {person.name}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-text">{person.name}</p>
+                    {person.note && (
+                      <p className="truncate text-xs text-text-muted">
+                        {person.note}
+                      </p>
+                    )}
+                  </div>
+                  <PersonEditDialog
+                    person={person}
+                    onSaved={(updated) =>
+                      setPeople((ps) =>
+                        ps
+                          .map((x) => (x.id === updated.id ? updated : x))
+                          .sort((a, b) => a.name.localeCompare(b.name)),
+                      )
+                    }
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
@@ -217,6 +283,82 @@ export function PeopleManager({
   );
 }
 
+function PersonEditDialog({
+  person,
+  onSaved,
+}: {
+  person: PersonDto;
+  onSaved: (p: PersonDto) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(person.name);
+  const [color, setColor] = useState<string | null>(person.color ?? null);
+  const [note, setNote] = useState(person.note ?? '');
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const { person: updated } = await apiSend<{ person: PersonDto }>(
+        `/api/people/${person.id}`,
+        'PATCH',
+        { name: name.trim(), color, note: note.trim() || null },
+      );
+      onSaved(updated);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={`Edit ${person.name}`}>
+          <Pencil className="size-4 text-text-muted" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit person</DialogTitle>
+          <DialogDescription>Name, color, and a note.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-name">Name</Label>
+            <Input
+              id="edit-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Color</Label>
+            <ColorSwatches value={color} onChange={setColor} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-note">Note</Label>
+            <Input
+              id="edit-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Nickname or a reminder"
+              maxLength={200}
+            />
+          </div>
+        </div>
+        <Button onClick={save} disabled={saving || !name.trim()}>
+          Save
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PresetDialog({
   people,
   onCreated,
@@ -290,6 +432,7 @@ function PresetDialog({
                 <PersonChip
                   key={p.id}
                   name={p.name}
+                  color={p.color}
                   selected={selected.has(p.id)}
                   onToggle={() => toggle(p.id)}
                 />

@@ -13,7 +13,7 @@ export default async function NewBillPage() {
 
   return (
     <SplitFlow
-      roster={people.map((p) => ({ id: p.id, name: p.name }))}
+      roster={people.map((p) => ({ id: p.id, name: p.name, color: p.color }))}
       presets={presets.map((p) => ({
         id: p.id,
         name: p.name,

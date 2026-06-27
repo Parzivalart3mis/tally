@@ -13,7 +13,12 @@ export default async function PeoplePage() {
 
   return (
     <PeopleManager
-      initialPeople={people.map((p) => ({ id: p.id, name: p.name }))}
+      initialPeople={people.map((p) => ({
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        note: p.note,
+      }))}
       initialPresets={presets.map((p) => ({
         id: p.id,
         name: p.name,

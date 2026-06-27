@@ -4,9 +4,12 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { initials } from '@/lib/format';
+import { colorHex } from '@/lib/colors';
 
 interface PersonChipProps {
   name: string;
+  /** Optional palette color id for the avatar. */
+  color?: string | null | undefined;
   selected?: boolean;
   onToggle?: () => void;
   disabled?: boolean;
@@ -17,6 +20,7 @@ interface PersonChipProps {
 /** A toggleable person chip. Springs scale 0.9 → 1.1 → 1 when toggled on. */
 export function PersonChip({
   name,
+  color,
   selected = false,
   onToggle,
   disabled = false,
@@ -28,11 +32,11 @@ export function PersonChip({
     <>
       <span
         className={cn(
-          'grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-semibold',
-          selected
-            ? 'bg-white/20 text-white'
-            : 'bg-surface-2 text-text-muted',
+          'grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white',
+          selected && 'bg-white/20',
+          !selected && !color && 'bg-surface-2 text-text-muted',
         )}
+        style={!selected && color ? { background: colorHex(color) } : undefined}
         aria-hidden
       >
         {selected ? <Check className="size-3.5" /> : initials(name)}

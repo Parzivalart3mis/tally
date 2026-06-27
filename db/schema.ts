@@ -16,6 +16,8 @@ export type BillStatus = (typeof BILL_STATUS)[number];
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(), // Clerk userId
   email: text('email').notNull().unique(),
+  // which roster person is "me" — used to bold "your share" on a bill.
+  selfPersonId: text('self_person_id'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -31,6 +33,8 @@ export const people = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    color: text('color'), // optional palette token for chips/avatars
+    note: text('note'), // optional nickname/note
     archived: integer('archived', { mode: 'boolean' })
       .notNull()
       .default(false), // soft delete
@@ -78,6 +82,11 @@ export const bills = sqliteTable(
       .default('EXACT_CODE'),
     receiptImageUrl: text('receipt_image_url'), // Vercel Blob URL
     currency: text('currency').notNull().default('USD'),
+    paidByName: text('paid_by_name'), // frozen name of who paid (optional)
+    tags: text('tags', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
 
     // confirmed bill-level totals (stored in cents as integers)
     subtotalCents: integer('subtotal_cents').notNull().default(0),

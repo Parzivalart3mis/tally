@@ -17,6 +17,7 @@ import {
   Search,
   SunMoon,
   Users,
+  BarChart3,
 } from 'lucide-react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { apiGet } from '@/lib/client';
@@ -137,6 +138,9 @@ export function CommandPaletteProvider({
                   </PaletteItem>
                   <PaletteItem onSelect={() => go('/app/new')} icon={<Plus className="size-4" />}>
                     New bill
+                  </PaletteItem>
+                  <PaletteItem onSelect={() => go('/app/insights')} icon={<BarChart3 className="size-4" />}>
+                    Insights
                   </PaletteItem>
                   <PaletteItem onSelect={() => go('/app/people')} icon={<Users className="size-4" />}>
                     People

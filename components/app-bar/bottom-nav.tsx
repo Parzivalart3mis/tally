@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Plus, Users } from 'lucide-react';
+import { Home, Plus, Users, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/app', label: 'Home', icon: Home, exact: true },
   { href: '/app/new', label: 'New bill', icon: Plus, exact: false },
+  { href: '/app/insights', label: 'Insights', icon: BarChart3, exact: false },
   { href: '/app/people', label: 'People', icon: Users, exact: false },
 ] as const;
 

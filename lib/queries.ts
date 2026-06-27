@@ -195,6 +195,107 @@ export async function listPeople(userId: string, includeArchived = false) {
     .orderBy(asc(people.name));
 }
 
+export interface Insights {
+  billCount: number;
+  totalCents: number;
+  avgCents: number;
+  thisMonthCents: number;
+  thisMonthCount: number;
+  months: { label: string; cents: number }[];
+  people: { name: string; totalCents: number; billCount: number }[];
+  mostSplitWith: { name: string; billCount: number } | null;
+}
+
+const MONTH_LABELS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/** Read-only spending analytics over the user's saved bills (no balances). */
+export async function getInsights(userId: string): Promise<Insights> {
+  const billRows = await db
+    .select({
+      id: bills.id,
+      grandTotalCents: bills.grandTotalCents,
+      createdAt: bills.createdAt,
+    })
+    .from(bills)
+    .where(and(eq(bills.userId, userId), eq(bills.status, 'COMPLETED')));
+
+  const ids = billRows.map((b) => b.id);
+  const parts = ids.length
+    ? await db
+        .select({
+          billId: billParticipants.billId,
+          name: billParticipants.nameSnapshot,
+          totalCents: billParticipants.totalCents,
+        })
+        .from(billParticipants)
+        .where(inArray(billParticipants.billId, ids))
+    : [];
+
+  const now = new Date();
+  const billCount = billRows.length;
+  const totalCents = billRows.reduce((s, b) => s + b.grandTotalCents, 0);
+
+  // last 6 months (oldest → newest)
+  const buckets: { key: number; label: string; cents: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({
+      key: d.getFullYear() * 12 + d.getMonth(),
+      label: MONTH_LABELS[d.getMonth()] ?? '',
+      cents: 0,
+    });
+  }
+  const thisKey = now.getFullYear() * 12 + now.getMonth();
+  let thisMonthCents = 0;
+  let thisMonthCount = 0;
+  for (const b of billRows) {
+    const k = b.createdAt.getFullYear() * 12 + b.createdAt.getMonth();
+    const bucket = buckets.find((x) => x.key === k);
+    if (bucket) bucket.cents += b.grandTotalCents;
+    if (k === thisKey) {
+      thisMonthCents += b.grandTotalCents;
+      thisMonthCount += 1;
+    }
+  }
+
+  // per-person totals + distinct bill counts
+  const byPerson = new Map<
+    string,
+    { totalCents: number; bills: Set<string> }
+  >();
+  for (const p of parts) {
+    const e = byPerson.get(p.name) ?? { totalCents: 0, bills: new Set() };
+    e.totalCents += p.totalCents;
+    e.bills.add(p.billId);
+    byPerson.set(p.name, e);
+  }
+  const people = [...byPerson.entries()]
+    .map(([name, e]) => ({
+      name,
+      totalCents: e.totalCents,
+      billCount: e.bills.size,
+    }))
+    .sort((a, b) => b.totalCents - a.totalCents);
+
+  const mostSplitWith = [...people].sort((a, b) => b.billCount - a.billCount)[0];
+
+  return {
+    billCount,
+    totalCents,
+    avgCents: billCount ? Math.round(totalCents / billCount) : 0,
+    thisMonthCents,
+    thisMonthCount,
+    months: buckets.map((b) => ({ label: b.label, cents: b.cents })),
+    people,
+    mostSplitWith: mostSplitWith
+      ? { name: mostSplitWith.name, billCount: mostSplitWith.billCount }
+      : null,
+  };
+}
+
 /** Distinct tags used across the user's bills, sorted. */
 export async function getUsedTags(userId: string): Promise<string[]> {
   const rows = await db

@@ -37,16 +37,43 @@ async function handle<T>(res: Response): Promise<T> {
  * double-apply a mutation (no duplicate bills). Spreading retries over ~12s
  * lets a brief post-deploy cache window clear without the user waiting.
  */
+/** A freshly-minted Clerk session token for the Authorization header, if Clerk
+ *  is loaded. getToken() refreshes a near-expiry token, so the server always
+ *  validates a current token instead of a possibly-stale cookie. */
+async function authHeader(): Promise<Record<string, string>> {
+  try {
+    const clerk = (
+      globalThis as {
+        Clerk?: { session?: { getToken?: () => Promise<string | null> } };
+      }
+    ).Clerk;
+    const token = await clerk?.session?.getToken?.();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 async function fetchWithRetry(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
   const delays = [800, 1500, 3000, 6000]; // ~11s across 4 retries
-  let res = await fetch(input, init);
+  const attempt = async () => {
+    const auth = await authHeader();
+    return fetch(input, {
+      ...init,
+      headers: {
+        ...(init?.headers as Record<string, string> | undefined),
+        ...auth,
+      },
+    });
+  };
+  let res = await attempt();
   for (const delay of delays) {
     if (res.status !== 404 && res.status !== 401) return res;
     await new Promise((r) => setTimeout(r, delay));
-    res = await fetch(input, init);
+    res = await attempt(); // re-mint a fresh token on each retry
   }
   return res;
 }

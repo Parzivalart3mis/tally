@@ -1,13 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-// Everything under /app and every /api route is protected, except the health
-// check. The marketing landing (/), sign-in, and sign-up stay public.
-const isProtected = createRouteMatcher(['/app(.*)', '/api/(.*)']);
-const isPublic = createRouteMatcher([
-  '/api/health',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-]);
+// Only /app PAGES are enforced here (so a signed-out visitor is redirected to
+// sign-in). API routes are intentionally NOT protected by the middleware:
+// `auth.protect()` returns an opaque 404 (renders /_not-found) when a session
+// token is momentarily stale, which looked like a routing failure. Instead,
+// every /api handler calls requireUser()/requireUserId() itself and returns a
+// clean, retryable 401. clerkMiddleware still RUNS on /api (the matcher below)
+// so auth()/currentUser() work inside those handlers — we just don't enforce.
+const isProtectedPage = createRouteMatcher(['/app(.*)']);
 
 // Dev-only: with DEV_USER_ID set (non-production), skip Clerk protection so the
 // seeded demo is viewable without configuring Clerk. No effect in production.
@@ -16,7 +16,7 @@ const devBypass =
 
 export default clerkMiddleware(async (auth, req) => {
   if (devBypass) return;
-  if (isProtected(req) && !isPublic(req)) {
+  if (isProtectedPage(req)) {
     await auth.protect();
   }
 });

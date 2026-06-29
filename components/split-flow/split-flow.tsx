@@ -7,7 +7,8 @@ import { ArrowLeft, ArrowRight, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiSend, apiUpload, ApiClientError } from '@/lib/client';
 import { parseMoneyToCents } from '@/lib/money';
-import type { SplitEngineId } from '@/lib/types';
+import { computeExactSplit } from '@/lib/split';
+import type { SplitEngineId, ComputeInput } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Stepper } from './stepper';
 import { UploadStep } from './upload-step';
@@ -277,6 +278,26 @@ export function SplitFlow({
     setComputing(true);
     try {
       const payload = buildPayload();
+
+      // The Exact engine is pure, deterministic, secret-free code — run it in
+      // the browser. No server round-trip means no /api/bills/compute call to
+      // fail, and the result is identical.
+      if (payload.engine === 'EXACT_CODE') {
+        const input: ComputeInput = {
+          items: payload.items.map((it, i) => ({
+            ...it,
+            sharedBy: payload.assignments[i] ?? [],
+          })),
+          totals: payload.totals,
+          participantNames: payload.participantNames,
+        };
+        setResult(computeExactSplit(input));
+        setVerification(null);
+        setStep('result');
+        return;
+      }
+
+      // Claude / Groq need server-side keys → go through the API.
       const data = await apiSend<ComputeResponse>(
         '/api/bills/compute',
         'POST',

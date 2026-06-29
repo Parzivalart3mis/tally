@@ -94,6 +94,15 @@ export default async function BillDetailPage({
           </div>
         )}
 
+        {bill.instructions && (
+          <div className="rounded-card border border-border bg-surface px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-text-hint">
+              Custom instructions
+            </p>
+            <p className="mt-0.5 text-sm text-text">{bill.instructions}</p>
+          </div>
+        )}
+
         {bill.receiptImageUrl && (
           <div className="overflow-hidden rounded-card border border-border bg-surface-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}

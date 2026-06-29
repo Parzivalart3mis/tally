@@ -60,8 +60,8 @@ export function ReviewStep({
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Items</Label>
-          <span className="text-xs text-text-hint">
-            {items.length} {items.length === 1 ? 'line' : 'lines'}
+          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent tabular">
+            {items.length} {items.length === 1 ? 'Item' : 'Items'}
           </span>
         </div>
 

@@ -10,6 +10,7 @@ import {
   Crop,
   Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 interface Page {
@@ -65,25 +66,48 @@ export function ImageEditor({
   const start = useRef<{ x: number; y: number } | null>(null);
 
   async function load(fs: File[]) {
-    const loaded = await Promise.all(
+    // allSettled (not all): a single image that fails to decode — or one that
+    // hangs (large HEIC on iOS) past the timeout — must not drop the others.
+    const settled = await Promise.allSettled(
       fs.map(
         (f) =>
           new Promise<Page>((res, rej) => {
             const url = URL.createObjectURL(f);
             const img = new Image();
-            img.onload = () =>
+            const timer = setTimeout(() => {
+              URL.revokeObjectURL(url);
+              rej(new Error('timeout'));
+            }, 20000);
+            img.onload = () => {
+              clearTimeout(timer);
               res({
                 id: Math.random().toString(36).slice(2),
                 img,
                 url,
                 rotation: 0,
               });
-            img.onerror = rej;
+            };
+            img.onerror = () => {
+              clearTimeout(timer);
+              URL.revokeObjectURL(url);
+              rej(new Error('decode failed'));
+            };
             img.src = url;
           }),
       ),
     );
-    setPages((p) => [...p, ...loaded]);
+    const loaded = settled
+      .filter((r): r is PromiseFulfilledResult<Page> => r.status === 'fulfilled')
+      .map((r) => r.value);
+    if (loaded.length) setPages((p) => [...p, ...loaded]);
+    const failed = settled.length - loaded.length;
+    if (failed > 0) {
+      toast.error(
+        `${failed} image${failed === 1 ? '' : 's'} couldn’t be read and ${
+          failed === 1 ? 'was' : 'were'
+        } skipped.`,
+      );
+    }
   }
 
   // load the initial files once
@@ -210,7 +234,12 @@ export function ImageEditor({
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
-        <p className="text-sm font-medium text-text">Edit receipt</p>
+        <p className="text-sm font-medium text-text">
+          Edit receipt
+          {pages.length > 1 && (
+            <span className="text-text-muted"> · {pages.length} pages</span>
+          )}
+        </p>
         <Button size="sm" onClick={use} disabled={busy || pages.length === 0}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : null}
           Use

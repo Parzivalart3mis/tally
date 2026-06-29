@@ -87,6 +87,7 @@ export const bills = sqliteTable(
       .$type<string[]>()
       .notNull()
       .default([]),
+    instructions: text('instructions'), // per-bill prompt for the AI engines
 
     // confirmed bill-level totals (stored in cents as integers)
     subtotalCents: integer('subtotal_cents').notNull().default(0),

@@ -25,6 +25,7 @@ export const POST = route(async (req: Request) => {
     items,
     totals: body.totals,
     participantNames: body.participantNames,
+    instructions: body.instructions ?? null,
   };
 
   const out = await computeWithEngine(body.engine, input, body.assignments);

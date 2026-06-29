@@ -94,6 +94,7 @@ export async function persistBill(
     currency: payload.currency,
     paidByName: payload.paidByName ?? null,
     tags: payload.tags ?? [],
+    instructions: payload.instructions ?? null,
     subtotalCents: totals.subtotalCents,
     taxCents: totals.taxCents,
     serviceCents: totals.serviceCents,

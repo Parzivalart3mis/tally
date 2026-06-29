@@ -69,6 +69,7 @@ function userMessage(input: ComputeInput, assignments: string[][]): string {
     })),
     assignments,
     participantNames: input.participantNames,
+    instructions: input.instructions ?? null,
     totals: input.totals,
   });
 }

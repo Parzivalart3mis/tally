@@ -20,6 +20,8 @@ export function AssignStep({
   onToggleExtra,
   engine,
   onEngine,
+  instructions,
+  onInstructions,
   lineCents,
 }: {
   items: DraftItem[];
@@ -33,8 +35,12 @@ export function AssignStep({
   onToggleExtra: (name: string) => void;
   engine: SplitEngineId;
   onEngine: (e: SplitEngineId) => void;
+  instructions: string;
+  onInstructions: (v: string) => void;
   lineCents: (item: DraftItem) => number;
 }) {
+  const exactSelected = engine === 'EXACT_CODE';
+  const hasInstructions = instructions.trim().length > 0;
   const presetNames = (preset: RosterPreset) =>
     preset.memberIds
       .map((id) => roster.find((p) => p.id === id)?.name)
@@ -149,6 +155,46 @@ export function AssignStep({
       <div className="space-y-2">
         <p className="text-sm font-medium text-text">Split engine</p>
         <EnginePicker value={engine} onChange={onEngine} />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-text">
+            Custom instructions{' '}
+            <span className="font-normal text-text-hint">(optional)</span>
+          </p>
+          <span className="text-[11px] text-text-hint tabular">
+            {instructions.length}/500
+          </span>
+        </div>
+        <textarea
+          value={instructions}
+          onChange={(e) => onInstructions(e.target.value.slice(0, 500))}
+          rows={3}
+          placeholder="e.g. Alice didn't drink — exclude her from the wine. Split the cake equally among everyone."
+          className="w-full resize-y rounded-card border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-hint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        />
+        {hasInstructions && exactSelected ? (
+          <div className="flex items-start gap-2 rounded-card border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <span className="flex-1">
+              The Exact engine can’t follow written instructions — they only
+              apply with Claude or Groq.{' '}
+              <button
+                type="button"
+                className="font-semibold underline"
+                onClick={() => onEngine('CLAUDE_PROMPT')}
+              >
+                Use Claude
+              </button>
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-text-hint">
+            Applies with the Claude or Groq engine. Totals always still
+            reconcile to the grand total.
+          </p>
+        )}
       </div>
     </div>
   );

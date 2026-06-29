@@ -59,6 +59,7 @@ export function SplitFlow({
   const [extras, setExtras] = useState<string[]>([]);
   const [paidBy, setPaidBy] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [instructions, setInstructions] = useState('');
   const [result, setResult] = useState<ComputeResponse['result'] | null>(null);
   const [verification, setVerification] =
     useState<ComputeResponse['verification']>(null);
@@ -267,6 +268,7 @@ export function SplitFlow({
       },
       assignments: wireAssignments,
       participantNames,
+      instructions: instructions.trim() || null,
     };
   }
 
@@ -330,6 +332,7 @@ export function SplitFlow({
           currency: 'USD',
           paidByName: paidBy,
           tags,
+          instructions: instructions.trim() || null,
           items: payload.items,
           totals: payload.totals,
           assignments: payload.assignments,
@@ -455,6 +458,8 @@ export function SplitFlow({
                 onToggleExtra={toggleExtra}
                 engine={engine}
                 onEngine={setEngine}
+                instructions={instructions}
+                onInstructions={setInstructions}
                 lineCents={lineCents}
               />
             )}

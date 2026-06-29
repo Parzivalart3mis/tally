@@ -102,6 +102,9 @@ function crossCheckAssignments(
   });
 }
 
+/** Optional free-text instruction for the AI engines to adjust the split. */
+export const billInstructions = z.string().trim().max(500).nullish();
+
 export const computeRequestSchema = z
   .object({
     engine: engineSchema,
@@ -109,6 +112,7 @@ export const computeRequestSchema = z
     totals: totalsCentsSchema,
     assignments: assignmentsSchema,
     participantNames: z.array(personName).min(1).max(100),
+    instructions: billInstructions,
   })
   .strict()
   .superRefine(crossCheckAssignments);
@@ -164,6 +168,7 @@ export const saveBillRequestSchema = z
     currency: z.string().length(3).default('USD'),
     paidByName: personName.nullish(),
     tags: z.array(boundedName(40)).max(20).optional(),
+    instructions: billInstructions,
     items: z.array(computeItemSchema).min(1).max(200),
     totals: totalsCentsSchema,
     assignments: assignmentsSchema,

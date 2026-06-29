@@ -42,6 +42,8 @@ export interface ComputeInput {
   totals: ComputeTotals;
   /** Union of everyone on the bill, including people with no items assigned. */
   participantNames: string[];
+  /** Optional per-bill instruction for the AI engines (ignored by EXACT_CODE). */
+  instructions?: string | null;
 }
 
 /** The single result shape every engine returns (all money in cents). */

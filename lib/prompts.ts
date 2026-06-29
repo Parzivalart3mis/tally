@@ -38,6 +38,8 @@ STEP 3 — Per-person totals: subtotalBeforeTax = sum of that person's item shar
 
 STEP 4 — Reconcile: compare the sum of all participants' totals to grandTotalCents. If they differ, adjust the ALPHABETICALLY LAST participant's total by the difference and report that difference as their centAdjustment.
 
+SPECIAL INSTRUCTIONS (optional): The input may include a "specialInstructions" string from the user. If present and non-empty, apply it to adjust WHO shares which items (or how the tax/extras pool is divided), overriding the default sharedBy/equal-split rules ONLY where the instruction applies. The instruction never changes the printed item prices or the bill totals. You MUST still do every calculation in integer cents and STEP 4 reconcile so the participant totals sum EXACTLY to grandTotalCents. If an instruction is ambiguous or impossible, fall back to the default rules.
+
 Return ONLY JSON matching exactly this shape (all money in integer cents):
 {
   "items": [{ "name": string, "unitPrice": int, "qty": number, "lineTotal": int, "sharedBy": string[], "sharePerPerson": int }],
@@ -52,6 +54,7 @@ export function buildSplitUserMessage(payload: {
   items: { name: string; unitPriceCents: number; qty: number; lineTotalCents: number }[];
   assignments: string[][];
   participantNames: string[];
+  instructions?: string | null;
   totals: {
     subtotalCents: number;
     taxCents: number;
@@ -69,10 +72,12 @@ export function buildSplitUserMessage(payload: {
     lineTotal: it.lineTotalCents,
     sharedBy: payload.assignments[i] ?? [],
   }));
+  const trimmed = payload.instructions?.trim();
   return JSON.stringify(
     {
       participants: payload.participantNames,
       items,
+      ...(trimmed ? { specialInstructions: trimmed } : {}),
       totals: {
         subtotal: payload.totals.subtotalCents,
         tax: payload.totals.taxCents,

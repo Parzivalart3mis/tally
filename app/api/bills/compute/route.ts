@@ -19,6 +19,7 @@ export const POST = route(async (req: Request) => {
     qty: it.qty,
     lineTotalCents: it.lineTotalCents,
     sharedBy: body.assignments[i] ?? [],
+    ...(body.weights?.[i] ? { weights: body.weights[i] } : {}),
   }));
 
   const input: ComputeInput = {

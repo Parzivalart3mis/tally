@@ -22,6 +22,8 @@ export function AssignStep({
   onEngine,
   instructions,
   onInstructions,
+  weights,
+  onWeight,
   lineCents,
 }: {
   items: DraftItem[];
@@ -37,6 +39,8 @@ export function AssignStep({
   onEngine: (e: SplitEngineId) => void;
   instructions: string;
   onInstructions: (v: string) => void;
+  weights: Record<string, Record<string, number>>;
+  onWeight: (itemId: string, name: string, w: number) => void;
   lineCents: (item: DraftItem) => number;
 }) {
   const exactSelected = engine === 'EXACT_CODE';
@@ -119,6 +123,53 @@ export function AssignStep({
                   />
                 ))}
               </div>
+
+              {selected.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <span className="text-[11px] uppercase tracking-wide text-text-hint">
+                    Shares
+                  </span>
+                  {selected.map((name) => {
+                    const w = weights[item.id]?.[name] ?? 1;
+                    return (
+                      <span
+                        key={name}
+                        className="inline-flex items-center gap-1.5 text-xs text-text"
+                      >
+                        <span className="max-w-[88px] truncate">{name}</span>
+                        <span className="inline-flex items-center overflow-hidden rounded-full border border-border">
+                          <button
+                            type="button"
+                            aria-label={`Decrease ${name}'s shares`}
+                            className="px-2 py-0.5 text-text-muted disabled:opacity-40"
+                            disabled={w <= 1}
+                            onClick={() => onWeight(item.id, name, w - 1)}
+                          >
+                            −
+                          </button>
+                          <span
+                            className={
+                              'min-w-[1.5rem] text-center tabular ' +
+                              (w > 1 ? 'font-semibold text-accent' : 'text-text')
+                            }
+                          >
+                            ×{w}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Increase ${name}'s shares`}
+                            className="px-2 py-0.5 text-text-muted disabled:opacity-40"
+                            disabled={w >= 20}
+                            onClick={() => onWeight(item.id, name, w + 1)}
+                          >
+                            +
+                          </button>
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
 
               {unassigned && (
                 <p className="mt-2 text-xs text-warning">

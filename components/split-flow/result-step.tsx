@@ -3,18 +3,14 @@
 import { cn } from '@/lib/utils';
 import { ResultView } from '@/components/bills/result-view';
 import { TagInput } from '@/components/bills/tag-input';
+import { allocateItemShares } from '@/lib/split';
 import type { SplitResult, SplitEngineId } from '@/lib/types';
 import type { ComputeResponse } from './types';
 
-/** Reconstruct per-person item shares from sharedBy + base share (residual to
- *  the last sharer) — the same canonical rule used when persisting. */
-function sharesFor(item: SplitResult['items'][number]) {
-  const n = item.sharedBy.length;
-  const base = item.sharePerPerson;
-  return item.sharedBy.map((name, j) => ({
-    name,
-    shareCents: j === n - 1 ? item.lineTotal - base * (n - 1) : base,
-  }));
+/** Per-person item shares via the same weighted helper the engine uses, so the
+ *  per-item chips always match the totals. */
+function sharesFor(item: SplitResult['items'][number], weights?: number[]) {
+  return allocateItemShares(item.lineTotal, item.sharedBy, weights);
 }
 
 export function ResultStep({
@@ -27,6 +23,7 @@ export function ResultStep({
   onPaidBy,
   tags,
   onTags,
+  weightsByItem,
   selfName,
 }: {
   result: SplitResult;
@@ -38,6 +35,7 @@ export function ResultStep({
   onPaidBy: (p: string | null) => void;
   tags: string[];
   onTags: (t: string[]) => void;
+  weightsByItem: number[][];
   selfName?: string | null;
 }) {
   return (
@@ -86,11 +84,11 @@ export function ResultStep({
         animateTotals
         selfName={selfName}
         payerName={paidBy}
-        items={result.items.map((it) => ({
+        items={result.items.map((it, i) => ({
           name: it.name,
           qty: it.qty,
           lineTotalCents: it.lineTotal,
-          shares: sharesFor(it),
+          shares: sharesFor(it, weightsByItem[i]),
         }))}
         participants={result.participants.map((p) => ({
           name: p.name,

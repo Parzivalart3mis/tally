@@ -9,6 +9,7 @@ import {
   people,
 } from '@/db/schema';
 import type { SaveBillRequest } from '@/lib/schemas/bills';
+import { allocateItemShares } from '@/lib/split';
 
 /**
  * Persist a completed bill as an immutable snapshot: the bill row, the frozen
@@ -25,7 +26,7 @@ export async function persistBill(
   opts: { db?: DB; createdAt?: Date } = {},
 ): Promise<string> {
   const db = opts.db ?? defaultDb;
-  const { result, items, assignments, totals } = payload;
+  const { result, items, assignments, weights, totals } = payload;
 
   // Map participant name -> active roster personId (null if not in roster).
   const roster = await db
@@ -68,18 +69,17 @@ export async function persistBill(
     });
 
     const sharers = assignments[i] ?? [];
-    const n = sharers.length;
-    const base = n > 0 ? Math.round(it.lineTotalCents / n) : 0;
-    sharers.forEach((name, j) => {
-      const bpId = nameToBpId.get(name);
+    // Same weighted allocation the engine + result view use, so the stored
+    // snapshot can never diverge from what was shown.
+    allocateItemShares(it.lineTotalCents, sharers, weights?.[i]).forEach((a) => {
+      const bpId = nameToBpId.get(a.name);
       if (!bpId) return;
-      const share =
-        j === n - 1 ? it.lineTotalCents - base * (n - 1) : base;
       assignmentRows.push({
         id: createId(),
         billItemId: itemId,
         billParticipantId: bpId,
-        shareCents: share,
+        shareCents: a.shareCents,
+        weight: a.weight,
       });
     });
   });

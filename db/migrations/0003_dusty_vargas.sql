@@ -1,0 +1,1 @@
+ALTER TABLE `item_assignments` ADD `weight` integer DEFAULT 1 NOT NULL;

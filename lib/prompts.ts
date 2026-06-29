@@ -22,10 +22,9 @@ Return ONLY the structured receipt data.`;
  */
 export const SPLIT_SYSTEM_PROMPT = `You are an exact bill-splitting calculator. You are given a confirmed list of line items, a per-item list of which people shared each item, the full participant set, and the bill-level totals. ALL MONEY VALUES ARE INTEGER CENTS. Do every calculation in integer cents. Never use floating point. Follow these rules precisely:
 
-STEP 1 — Per-item shares. For each item shared by n people:
-  - baseShare = round(lineTotalCents / n) to the nearest whole cent.
-  - Give every sharer baseShare.
-  - residual = lineTotalCents - baseShare * n (may be a few cents, positive or negative).
+STEP 1 — Per-item shares. Each item lists its sharers and may include a parallel "weights" array (shares-count per sharer, default 1 — e.g. a plus-one is 2). Let W = the sum of that item's weights (W = n when no weights are given). For each item:
+  - For each sharer i: share_i = round(lineTotalCents * weight_i / W) to the nearest whole cent.
+  - residual = lineTotalCents - sum(share_i) (may be a few cents, positive or negative).
   - Add the residual to the LAST person listed in that item's sharedBy array, so the per-item shares sum exactly to the line total.
 
 STEP 2 — Tax & extras pool, split equally across ALL participants (including anyone with no items):
@@ -51,7 +50,13 @@ sharePerPerson is the base share BEFORE the residual. participantSum must equal 
 
 /** Build the user message describing the confirmed bill for the split engines. */
 export function buildSplitUserMessage(payload: {
-  items: { name: string; unitPriceCents: number; qty: number; lineTotalCents: number }[];
+  items: {
+    name: string;
+    unitPriceCents: number;
+    qty: number;
+    lineTotalCents: number;
+    weights?: number[] | undefined;
+  }[];
   assignments: string[][];
   participantNames: string[];
   instructions?: string | null;
@@ -65,13 +70,20 @@ export function buildSplitUserMessage(payload: {
     grandTotalCents: number;
   };
 }): string {
-  const items = payload.items.map((it, i) => ({
-    name: it.name,
-    unitPrice: it.unitPriceCents,
-    qty: it.qty,
-    lineTotal: it.lineTotalCents,
-    sharedBy: payload.assignments[i] ?? [],
-  }));
+  const items = payload.items.map((it, i) => {
+    const sharedBy = payload.assignments[i] ?? [];
+    const weights = it.weights;
+    // Only include weights when they actually differ from the default (all 1).
+    const weighted = weights && weights.some((w) => w !== 1);
+    return {
+      name: it.name,
+      unitPrice: it.unitPriceCents,
+      qty: it.qty,
+      lineTotal: it.lineTotalCents,
+      sharedBy,
+      ...(weighted ? { weights } : {}),
+    };
+  });
   const trimmed = payload.instructions?.trim();
   return JSON.stringify(
     {

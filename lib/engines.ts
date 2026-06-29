@@ -66,6 +66,7 @@ function userMessage(input: ComputeInput, assignments: string[][]): string {
       unitPriceCents: i.unitPriceCents,
       qty: i.qty,
       lineTotalCents: i.lineTotalCents,
+      weights: i.weights,
     })),
     assignments,
     participantNames: input.participantNames,

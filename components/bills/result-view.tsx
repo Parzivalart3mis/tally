@@ -11,7 +11,7 @@ export interface ResultViewItem {
   name: string;
   qty: number;
   lineTotalCents: number;
-  shares: { name: string; shareCents: number }[];
+  shares: { name: string; shareCents: number; weight?: number }[];
 }
 export interface ResultViewParticipant {
   name: string;
@@ -171,6 +171,9 @@ export function ResultView({
                     className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs text-text-muted"
                   >
                     {s.name}
+                    {s.weight && s.weight > 1 && (
+                      <span className="font-semibold text-accent">×{s.weight}</span>
+                    )}
                     <span className="font-medium text-text tabular">
                       {formatCents(s.shareCents, currency)}
                     </span>

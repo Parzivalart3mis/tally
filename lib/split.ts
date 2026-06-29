@@ -24,6 +24,42 @@ interface ItemAllocation {
   shares: Map<string, number>;
 }
 
+/** Normalize a per-sharer weights array to positive integers (default 1). */
+export function normalizeWeights(count: number, weights?: number[]): number[] {
+  return Array.from({ length: count }, (_, j) => {
+    const w = weights?.[j];
+    return w != null && Number.isFinite(w) && w >= 1 ? Math.floor(w) : 1;
+  });
+}
+
+/**
+ * The single source of truth for one item's per-sharer split, in integer
+ * cents. Each sharer's share is proportional to their weight (default 1 each);
+ * the rounding residual folds into the LAST sharer so shares sum to the line
+ * total exactly. Used by the engine, the result display, and persistence so
+ * they can never diverge.
+ */
+export function allocateItemShares(
+  lineTotalCents: number,
+  sharers: string[],
+  weights?: number[],
+): { name: string; shareCents: number; weight: number }[] {
+  const n = sharers.length;
+  if (n === 0) return [];
+  const w = normalizeWeights(n, weights);
+  const totalWeight = w.reduce((s, x) => s + x, 0);
+  let allocated = 0;
+  const out = sharers.map((name, j) => {
+    const share =
+      totalWeight > 0 ? roundToCent((lineTotalCents * (w[j] ?? 1)) / totalWeight) : 0;
+    allocated += share;
+    return { name, shareCents: share, weight: w[j] ?? 1 };
+  });
+  const last = out[n - 1];
+  if (last) last.shareCents += lineTotalCents - allocated; // residual to last
+  return out;
+}
+
 /**
  * Compute the exact split. Pure; no I/O. Assumes participantNames is the
  * de-duplicated union of everyone on the bill (callers/routes guarantee this).
@@ -40,19 +76,15 @@ export function computeExactSplit(input: ComputeInput): SplitResult {
 
   const resultItems: SplitResult['items'] = items.map((item) => {
     const sharers = item.sharedBy;
-    const n = sharers.length;
     const lineTotal = item.lineTotalCents;
-    const baseShare = n > 0 ? roundToCent(lineTotal / n) : 0;
+    const w = normalizeWeights(sharers.length, item.weights);
+    const totalWeight = w.reduce((s, x) => s + x, 0);
+    // sharePerPerson is informational; report the per-weight-unit base share.
+    const baseShare = totalWeight > 0 ? roundToCent(lineTotal / totalWeight) : 0;
 
     const shares = new Map<string, number>();
-    for (const name of sharers) shares.set(name, baseShare);
-
-    if (n > 0) {
-      const residual = lineTotal - baseShare * n;
-      const last = sharers[n - 1];
-      if (last !== undefined) {
-        shares.set(last, (shares.get(last) ?? 0) + residual);
-      }
+    for (const a of allocateItemShares(lineTotal, sharers, item.weights)) {
+      shares.set(a.name, (shares.get(a.name) ?? 0) + a.shareCents);
     }
 
     for (const [name, share] of shares) {

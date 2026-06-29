@@ -167,6 +167,7 @@ export const itemAssignments = sqliteTable(
       .notNull()
       .references(() => billParticipants.id, { onDelete: 'cascade' }),
     shareCents: integer('share_cents').notNull(),
+    weight: integer('weight').notNull().default(1), // shares count (plus-one = 2)
   },
   (t) => ({ itemIdx: index('ia_item_idx').on(t.billItemId) }),
 );

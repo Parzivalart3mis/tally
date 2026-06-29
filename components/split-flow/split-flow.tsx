@@ -60,6 +60,10 @@ export function SplitFlow({
   const [paidBy, setPaidBy] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [instructions, setInstructions] = useState('');
+  // itemId -> (participant name -> shares weight). Absent = weight 1.
+  const [weights, setWeights] = useState<Record<string, Record<string, number>>>(
+    {},
+  );
   const [result, setResult] = useState<ComputeResponse['result'] | null>(null);
   const [verification, setVerification] =
     useState<ComputeResponse['verification']>(null);
@@ -191,7 +195,7 @@ export function SplitFlow({
   };
 
   // ── Assignment ──────────────────────────────────────────────────────────
-  const toggleAssign = (itemId: string, name: string) =>
+  const toggleAssign = (itemId: string, name: string) => {
     setAssignments((a) => {
       const cur = a[itemId] ?? [];
       return {
@@ -201,6 +205,26 @@ export function SplitFlow({
           : [...cur, name],
       };
     });
+    // Drop any weight when a person is toggled off (re-selecting resets to 1).
+    setWeights((m) => {
+      const row = m[itemId];
+      if (!row || !(name in row)) return m;
+      const { [name]: _drop, ...rest } = row;
+      return { ...m, [itemId]: rest };
+    });
+  };
+
+  const setWeight = (itemId: string, name: string, w: number) =>
+    setWeights((m) => ({
+      ...m,
+      [itemId]: { ...(m[itemId] ?? {}), [name]: Math.max(1, Math.min(20, w)) },
+    }));
+
+  // Per-item sharer weights, parallel to items / assignments (default 1).
+  const weightsByItem = (): number[][] =>
+    items.map((it) =>
+      (assignments[it.id] ?? []).map((name) => weights[it.id]?.[name] ?? 1),
+    );
 
   const applyPreset = (itemId: string, names: string[]) =>
     setAssignments((a) => {
@@ -267,6 +291,7 @@ export function SplitFlow({
         grandTotalCents,
       },
       assignments: wireAssignments,
+      weights: weightsByItem(),
       participantNames,
       instructions: instructions.trim() || null,
     };
@@ -289,9 +314,11 @@ export function SplitFlow({
           items: payload.items.map((it, i) => ({
             ...it,
             sharedBy: payload.assignments[i] ?? [],
+            weights: payload.weights[i] ?? [],
           })),
           totals: payload.totals,
           participantNames: payload.participantNames,
+          instructions: payload.instructions,
         };
         setResult(computeExactSplit(input));
         setVerification(null);
@@ -336,6 +363,7 @@ export function SplitFlow({
           items: payload.items,
           totals: payload.totals,
           assignments: payload.assignments,
+          weights: payload.weights,
           participantNames,
           result,
         },
@@ -460,6 +488,8 @@ export function SplitFlow({
                 onEngine={setEngine}
                 instructions={instructions}
                 onInstructions={setInstructions}
+                weights={weights}
+                onWeight={setWeight}
                 lineCents={lineCents}
               />
             )}
@@ -473,6 +503,7 @@ export function SplitFlow({
                 onPaidBy={setPaidBy}
                 tags={tags}
                 onTags={setTags}
+                weightsByItem={weightsByItem()}
                 selfName={selfName ?? null}
               />
             )}

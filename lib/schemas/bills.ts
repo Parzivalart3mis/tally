@@ -73,11 +73,18 @@ const assignmentsSchema = z
   .array(z.array(personName).min(1).max(100))
   .max(200);
 
+/** Optional shares-counts, parallel to assignments (each row matches that
+ *  item's sharer list). Absent rows / values default to weight 1. */
+const weightsSchema = z
+  .array(z.array(z.number().int().min(1).max(20)).max(100))
+  .max(200);
+
 function crossCheckAssignments(
   v: {
     items: unknown[];
     assignments: string[][];
     participantNames: string[];
+    weights?: number[][] | undefined;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -100,6 +107,26 @@ function crossCheckAssignments(
       }
     });
   });
+  // weights (if present) must line up one-to-one with each item's sharer list.
+  if (v.weights) {
+    if (v.weights.length !== v.assignments.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'weights must be parallel to assignments',
+        path: ['weights'],
+      });
+    }
+    v.weights.forEach((row, i) => {
+      const sharers = v.assignments[i];
+      if (sharers && row.length !== sharers.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'each weights row must match its item sharer count',
+          path: ['weights', i],
+        });
+      }
+    });
+  }
 }
 
 /** Optional free-text instruction for the AI engines to adjust the split. */
@@ -111,6 +138,7 @@ export const computeRequestSchema = z
     items: z.array(computeItemSchema).min(1).max(200),
     totals: totalsCentsSchema,
     assignments: assignmentsSchema,
+    weights: weightsSchema.optional(),
     participantNames: z.array(personName).min(1).max(100),
     instructions: billInstructions,
   })
@@ -172,6 +200,7 @@ export const saveBillRequestSchema = z
     items: z.array(computeItemSchema).min(1).max(200),
     totals: totalsCentsSchema,
     assignments: assignmentsSchema,
+    weights: weightsSchema.optional(),
     participantNames: z.array(personName).min(1).max(100),
     result: splitResultSchema,
   })

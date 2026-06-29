@@ -3,6 +3,7 @@ import {
   computeExactSplit,
   verifySplitResult,
   alphabeticallyLast,
+  allocateItemShares,
 } from '@/lib/split';
 import type { ComputeInput, ComputeItem, ComputeTotals } from '@/lib/types';
 
@@ -10,7 +11,7 @@ function item(
   name: string,
   lineTotalCents: number,
   sharedBy: string[],
-  opts: { unitPriceCents?: number; qty?: number } = {},
+  opts: { unitPriceCents?: number; qty?: number; weights?: number[] } = {},
 ): ComputeItem {
   return {
     name,
@@ -18,6 +19,7 @@ function item(
     sharedBy,
     unitPriceCents: opts.unitPriceCents ?? lineTotalCents,
     qty: opts.qty ?? 1,
+    ...(opts.weights ? { weights: opts.weights } : {}),
   };
 }
 
@@ -276,5 +278,55 @@ describe('verifySplitResult', () => {
     const v = verifySplitResult(bogus);
     expect(v.reconciles).toBe(false);
     expect(v.match).toBe(false);
+  });
+});
+
+describe('weighted splits (plus-ones)', () => {
+  it('allocateItemShares splits proportionally and reconciles exactly', () => {
+    const out = allocateItemShares(3000, ['Alice', 'Bob'], [2, 1]);
+    expect(out.map((o) => o.shareCents)).toEqual([2000, 1000]);
+    expect(out.map((o) => o.weight)).toEqual([2, 1]);
+    expect(out.reduce((s, o) => s + o.shareCents, 0)).toBe(3000);
+  });
+
+  it('folds the rounding residual into the last sharer', () => {
+    // 1000 / weight-sum 3 = 333.33 → 333 each by weight, residual to last.
+    const out = allocateItemShares(1000, ['Alice', 'Bob', 'Carol'], [1, 1, 1]);
+    expect(out.reduce((s, o) => s + o.shareCents, 0)).toBe(1000);
+    const weighted = allocateItemShares(1000, ['Alice', 'Bob'], [2, 1]);
+    expect(weighted.reduce((s, o) => s + o.shareCents, 0)).toBe(1000);
+    expect(weighted[0]!.shareCents).toBe(667); // round(1000*2/3)
+    expect(weighted[1]!.shareCents).toBe(333); // 333 base + residual 0
+  });
+
+  it('all weights = 1 is identical to an unweighted split', () => {
+    const sharers = ['Alice', 'Bob', 'Carol'];
+    const plain = computeExactSplit(
+      input([item('Pizza', 1000, sharers)], { grandTotalCents: 1000 }, sharers),
+    );
+    const ones = computeExactSplit(
+      input(
+        [item('Pizza', 1000, sharers, { weights: [1, 1, 1] })],
+        { grandTotalCents: 1000 },
+        sharers,
+      ),
+    );
+    expect(totalsByName(ones)).toEqual(totalsByName(plain));
+  });
+
+  it('a plus-one pays a double item share, and the bill still reconciles', () => {
+    const sharers = ['Alice', 'Vishesh'];
+    const r = computeExactSplit(
+      input(
+        [item('Wine', 3000, sharers, { weights: [1, 2] })],
+        { subtotalCents: 3000, grandTotalCents: 3000 },
+        sharers,
+      ),
+    );
+    const by = totalsByName(r);
+    expect(by.Alice).toBe(1000);
+    expect(by.Vishesh).toBe(2000);
+    expect(r.sumCheck.match).toBe(true);
+    expect(verifySplitResult(r).reconciles).toBe(true);
   });
 });

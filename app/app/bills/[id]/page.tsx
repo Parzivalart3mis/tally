@@ -28,12 +28,16 @@ export default async function BillDetailPage({
       ?.nameSnapshot ?? null;
 
   const nameByBp = new Map(participants.map((p) => [p.id, p.nameSnapshot]));
-  const sharesByItem = new Map<string, { name: string; shareCents: number }[]>();
+  const sharesByItem = new Map<
+    string,
+    { name: string; shareCents: number; weight: number }[]
+  >();
   for (const a of assignments) {
     const arr = sharesByItem.get(a.billItemId) ?? [];
     arr.push({
       name: nameByBp.get(a.billParticipantId) ?? '?',
       shareCents: a.shareCents,
+      weight: a.weight,
     });
     sharesByItem.set(a.billItemId, arr);
   }

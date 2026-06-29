@@ -19,6 +19,9 @@ export interface ComputeItem {
   /** Participant names that shared this item. Order matters: the last name
    *  receives the per-item rounding residual. */
   sharedBy: string[];
+  /** Optional shares-count per sharer, parallel to sharedBy (default 1 each).
+   *  e.g. a plus-one gives that person weight 2. */
+  weights?: number[];
 }
 
 /** Confirmed bill-level totals. Tax may be given as an amount or a rate. */
